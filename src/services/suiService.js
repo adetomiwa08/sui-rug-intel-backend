@@ -107,7 +107,7 @@ export async function getCoinsOwnedByAddress(address) {
 export async function getDexScreenerTokens() {
   try {
     const response = await axios.get(
-      'https://api.dexscreener.com/latest/dex/tokens/sui',
+      'https://api.dexscreener.com/latest/dex/search?q=SUI',
       { timeout: 10000 }
     )
     return response.data

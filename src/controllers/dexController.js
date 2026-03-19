@@ -9,7 +9,8 @@ export async function getTopTokens(req, res) {
 
     // Filter SUI pairs only, sort by volume
     const suiPairs = data.pairs
-      .filter(p => p.chainId === 'sui' && p.liquidity?.usd > 1000)
+      .filter(p => p.chainId === 'sui')
+      .filter(p => p.liquidity?.usd > 0)
       .sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
       .slice(0, 20)
       .map(p => ({
