@@ -106,24 +106,28 @@ export async function getCoinsOwnedByAddress(address) {
 // DexScreener API
 export async function getDexScreenerTokens() {
   try {
-    const response = await axios.get(
-      'https://api.dexscreener.com/latest/dex/search?q=sui',
-      { timeout: 10000 }
+    // Fetch from multiple searches to get diverse SUI ecosystem tokens
+    const queries = ['CETUS', 'DEEP', 'BUCK', 'NAVX', 'TURBOS', 'BLUB', 'ALPHA', 'HASUI']
+    
+    const responses = await Promise.allSettled(
+      queries.map(q => 
+        axios.get(`https://api.dexscreener.com/latest/dex/search?q=${q}`, { timeout: 10000 })
+      )
     )
 
-    const pairs = response.data?.pairs || []
-
-    // Deduplicate by baseToken address — keep highest volume pair per token
     const seen = new Map()
-    pairs
-      .filter(p => p.chainId === 'sui' && p.baseToken?.symbol !== 'SUI')
-      .forEach(p => {
-        const addr = p.baseToken?.address
-        if (!addr) return
-        if (!seen.has(addr) || (p.volume?.h24 || 0) > (seen.get(addr).volume?.h24 || 0)) {
+
+    responses.forEach(r => {
+      if (r.status !== 'fulfilled') return
+      const pairs = r.value.data?.pairs || []
+      pairs
+        .filter(p => p.chainId === 'sui' && p.liquidity?.usd > 100)
+        .forEach(p => {
+          const addr = p.baseToken?.address
+          if (!addr || seen.has(addr)) return
           seen.set(addr, p)
-        }
-      })
+        })
+    })
 
     return { pairs: Array.from(seen.values()) }
   } catch (error) {
