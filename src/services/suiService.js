@@ -102,3 +102,43 @@ export async function getNetworkMetrics() {
 export async function getCoinsOwnedByAddress(address) {
   return rpcCall('suix_getAllCoins', [address, null, 50])
 }
+
+// DexScreener API
+export async function getDexScreenerTokens() {
+  try {
+    const response = await axios.get(
+      'https://api.dexscreener.com/latest/dex/tokens/sui',
+      { timeout: 10000 }
+    )
+    return response.data
+  } catch (error) {
+    console.error('DexScreener error:', error.message)
+    return null
+  }
+}
+
+export async function getDexScreenerToken(address) {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      { timeout: 10000 }
+    )
+    return response.data
+  } catch (error) {
+    console.error('DexScreener token error:', error.message)
+    return null
+  }
+}
+
+export async function searchDexScreener(query) {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/search?q=${query}`,
+      { timeout: 10000 }
+    )
+    return response.data
+  } catch (error) {
+    console.error('DexScreener search error:', error.message)
+    return null
+  }
+}

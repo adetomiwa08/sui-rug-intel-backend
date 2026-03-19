@@ -27,12 +27,14 @@ app.get('/', (req, res) => {
 
 // Routes
 import tokenRoutes from './routes/tokens.js'
+import dexRoutes from './routes/dex.js'
 import walletRoutes from './routes/wallets.js'
 import alertRoutes from './routes/alerts.js'
 import networkRoutes from './routes/network.js'
 import searchRoutes from './routes/search.js'
 
 app.use('/api/tokens', tokenRoutes)
+app.use('/api/dex', dexRoutes)
 app.use('/api/wallets', walletRoutes)
 app.use('/api/alerts', alertRoutes)
 app.use('/api/network', networkRoutes)
