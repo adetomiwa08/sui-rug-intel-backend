@@ -135,15 +135,44 @@ export async function getDexScreenerTokens() {
     return null
   }
 }
-export async function getDexScreenerToken(address) {
+export async function getDexScreenerTokens() {
   try {
-    const response = await axios.get(
-      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
-      { timeout: 10000 }
+    // Fetch multiple searches in parallel to get broad SUI ecosystem coverage
+    const queries = [
+      'CETUS', 'DEEP', 'BUCK', 'NAVX', 'TURBOS',
+      'BLUB', 'ALPHA', 'HASUI', 'HIPPO', 'LOFI',
+      'BLUE', 'WAL', 'HAEDAL', 'SCA', 'IKA',
+      'AFSUI', 'USDB', 'JACKSON', 'RUBY', 'FLAG',
+      'NAVI', 'PYTH', 'WBTC', 'WETH', 'USDC',
+      'MEME', 'PEPE', 'DOGE', 'SHIB', 'CAT',
+      'FROG', 'PUNK', 'APE', 'MOON', 'ROCKET',
+      'SUI', 'MOVE', 'FLOW', 'WAVE', 'DROP'
+    ]
+
+    const responses = await Promise.allSettled(
+      queries.map(q =>
+        axios.get(`https://api.dexscreener.com/latest/dex/search?q=${q}`, { timeout: 10000 })
+      )
     )
-    return response.data
+
+    const seen = new Map()
+
+    responses.forEach(r => {
+      if (r.status !== 'fulfilled') return
+      const pairs = r.value.data?.pairs || []
+      pairs
+        .filter(p => p.chainId === 'sui' && p.liquidity?.usd > 100)
+        .forEach(p => {
+          const addr = p.baseToken?.address
+          if (!addr || seen.has(addr)) return
+          // Skip pure stablecoins and wrapped BTC/ETH from main list
+          seen.set(addr, p)
+        })
+    })
+
+    return { pairs: Array.from(seen.values()) }
   } catch (error) {
-    console.error('DexScreener token error:', error.message)
+    console.error('DexScreener error:', error.message)
     return null
   }
 }
