@@ -187,7 +187,17 @@ export async function getRuggedTokens(req, res) {
       .filter(t => {
         const athDrop = Math.abs(t.ath_change_percentage || 0)
         const volume = t.total_volume || 0
-        return athDrop >= 85 && volume < 500000
+        const price = t.current_price || 0
+        const marketCap = t.market_cap || 0
+
+        // Deeply dead — down 95%+ AND almost no trading activity
+        const deeplyDead = athDrop >= 95 && volume < 50000
+        // Essentially worthless — price near zero with no activity
+        const essentiallyDead = athDrop >= 90 && volume < 5000 && price < 0.001
+        // Abandoned project — massive drop with tiny remaining market cap
+        const abandonedProject = athDrop >= 97 && marketCap < 500000
+
+        return deeplyDead || essentiallyDead || abandonedProject
       })
       .map(t => {
         const athDrop = Math.abs(t.ath_change_percentage || 0)
