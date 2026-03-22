@@ -158,3 +158,16 @@ export async function searchDexScreener(query) {
     return null
   }
 }
+
+export async function getCoinGeckoSuiTokens() {
+  try {
+    const response = await axios.get(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=sui-ecosystem&order=market_cap_desc&per_page=100&page=1',
+      { timeout: 15000 }
+    )
+    return response.data
+  } catch (error) {
+    console.error('CoinGecko error:', error.message)
+    return null
+  }
+}
