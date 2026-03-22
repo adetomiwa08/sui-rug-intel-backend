@@ -16,7 +16,6 @@ export async function getTopTokens(req, res) {
 
     const seen = new Map()
 
-    // Process DexScreener data
     if (dexData.status === 'fulfilled' && dexData.value?.pairs) {
       dexData.value.pairs
         .filter(p => p.chainId === 'sui' && p.liquidity?.usd > 0)
@@ -50,7 +49,6 @@ export async function getTopTokens(req, res) {
         })
     }
 
-    // Process CoinGecko data — add tokens not already in map
     if (geckoData.status === 'fulfilled' && geckoData.value) {
       geckoData.value.forEach(t => {
         const key = `gecko_${t.id}`
@@ -172,6 +170,56 @@ export async function searchTokens(req, res) {
       }))
 
     res.json({ success: true, data: results })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+export async function getRuggedTokens(req, res) {
+  try {
+    const geckoData = await getCoinGeckoSuiTokens()
+
+    if (!geckoData) {
+      return res.json({ success: true, data: [] })
+    }
+
+    const rugged = geckoData
+      .filter(t => {
+        const athDrop = Math.abs(t.ath_change_percentage || 0)
+        const volume = t.total_volume || 0
+        return athDrop >= 85 && volume < 500000
+      })
+      .map(t => {
+        const athDrop = Math.abs(t.ath_change_percentage || 0)
+        const rugScore = Math.min(99, Math.round(athDrop * 0.95))
+        const causeOfDeath = athDrop >= 99 ? 'Liquidity Drain'
+          : athDrop >= 97 ? 'Dev Dump'
+          : athDrop >= 95 ? 'Honeypot'
+          : 'Mint Attack'
+
+        return {
+          id: t.id,
+          token: t.symbol?.toUpperCase(),
+          name: t.name,
+          imageUrl: t.image,
+          dateDied: t.ath_date ? new Date(t.ath_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
+          causeOfDeath,
+          liquidityStolen: t.market_cap ? `$${formatNumber(t.market_cap)}` : 'Unknown',
+          peakMcap: t.ath && t.circulating_supply ? `$${formatNumber(t.ath * t.circulating_supply)}` : 'Unknown',
+          currentPrice: t.current_price ? `$${t.current_price}` : '$0',
+          athDrop: `-${athDrop.toFixed(1)}%`,
+          rugScore,
+          holders: 'N/A',
+          devWallet: 'N/A',
+          description: `${t.name} (${t.symbol?.toUpperCase()}) collapsed ${athDrop.toFixed(0)}% from its all-time high of $${t.ath}. Current price is $${t.current_price}. Classic signs of an abandoned or rugged project.`,
+          txHash: 'N/A',
+          rip: `💀 Down ${athDrop.toFixed(0)}% from ATH`,
+          geckoUrl: `https://www.coingecko.com/en/coins/${t.id}`,
+        }
+      })
+      .sort((a, b) => b.rugScore - a.rugScore)
+
+    res.json({ success: true, data: rugged })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
