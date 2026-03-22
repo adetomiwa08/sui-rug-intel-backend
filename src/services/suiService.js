@@ -4,8 +4,7 @@ dotenv.config()
 
 const SUI_RPC = process.env.SUI_RPC_URL || 'https://fullnode.mainnet.sui.io'
 
-// Base RPC call function
-async function rpcCall(method, params = []) {
+export async function rpcCall(method, params = []) {
   try {
     const response = await axios.post(SUI_RPC, {
       jsonrpc: '2.0',
@@ -23,7 +22,6 @@ async function rpcCall(method, params = []) {
   }
 }
 
-// Get transaction details
 export async function getTransaction(txHash) {
   return rpcCall('sui_getTransactionBlock', [
     txHash,
@@ -36,12 +34,10 @@ export async function getTransaction(txHash) {
   ])
 }
 
-// Get wallet balance and objects
 export async function getWalletBalance(address) {
   return rpcCall('suix_getAllBalances', [address])
 }
 
-// Get wallet transactions
 export async function getWalletTransactions(address) {
   return rpcCall('suix_queryTransactionBlocks', [
     {
@@ -57,7 +53,6 @@ export async function getWalletTransactions(address) {
   ])
 }
 
-// Get object details (token/contract)
 export async function getObject(objectId) {
   return rpcCall('sui_getObject', [
     objectId,
@@ -70,22 +65,18 @@ export async function getObject(objectId) {
   ])
 }
 
-// Get coin metadata
 export async function getCoinMetadata(coinType) {
   return rpcCall('suix_getCoinMetadata', [coinType])
 }
 
-// Get total supply
 export async function getTotalSupply(coinType) {
   return rpcCall('suix_getTotalSupply', [coinType])
 }
 
-// Get latest checkpoint (for network stats)
 export async function getLatestCheckpoint() {
   return rpcCall('sui_getLatestCheckpointSequenceNumber', [])
 }
 
-// Get network metrics
 export async function getNetworkMetrics() {
   try {
     const [checkpoint] = await Promise.all([
@@ -98,46 +89,12 @@ export async function getNetworkMetrics() {
   }
 }
 
-// Get coins owned by address
 export async function getCoinsOwnedByAddress(address) {
   return rpcCall('suix_getAllCoins', [address, null, 50])
 }
 
-// DexScreener API
 export async function getDexScreenerTokens() {
   try {
-    // Fetch from multiple searches to get diverse SUI ecosystem tokens
-    const queries = ['CETUS', 'DEEP', 'BUCK', 'NAVX', 'TURBOS', 'BLUB', 'ALPHA', 'HASUI']
-    
-    const responses = await Promise.allSettled(
-      queries.map(q => 
-        axios.get(`https://api.dexscreener.com/latest/dex/search?q=${q}`, { timeout: 10000 })
-      )
-    )
-
-    const seen = new Map()
-
-    responses.forEach(r => {
-      if (r.status !== 'fulfilled') return
-      const pairs = r.value.data?.pairs || []
-      pairs
-        .filter(p => p.chainId === 'sui' && p.liquidity?.usd > 100)
-        .forEach(p => {
-          const addr = p.baseToken?.address
-          if (!addr || seen.has(addr)) return
-          seen.set(addr, p)
-        })
-    })
-
-    return { pairs: Array.from(seen.values()) }
-  } catch (error) {
-    console.error('DexScreener error:', error.message)
-    return null
-  }
-}
-export async function getDexScreenerTokens() {
-  try {
-    // Fetch multiple searches in parallel to get broad SUI ecosystem coverage
     const queries = [
       'CETUS', 'DEEP', 'BUCK', 'NAVX', 'TURBOS',
       'BLUB', 'ALPHA', 'HASUI', 'HIPPO', 'LOFI',
@@ -165,7 +122,6 @@ export async function getDexScreenerTokens() {
         .forEach(p => {
           const addr = p.baseToken?.address
           if (!addr || seen.has(addr)) return
-          // Skip pure stablecoins and wrapped BTC/ETH from main list
           seen.set(addr, p)
         })
     })
@@ -173,6 +129,19 @@ export async function getDexScreenerTokens() {
     return { pairs: Array.from(seen.values()) }
   } catch (error) {
     console.error('DexScreener error:', error.message)
+    return null
+  }
+}
+
+export async function getDexScreenerToken(address) {
+  try {
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      { timeout: 10000 }
+    )
+    return response.data
+  } catch (error) {
+    console.error('DexScreener token error:', error.message)
     return null
   }
 }
